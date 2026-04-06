@@ -113,10 +113,11 @@
 
             <!-- אזור העריכה המרכזי -->
             <main class="flex-1 overflow-y-auto p-6 bg-[#0b1120] shadow-inner relative">
-                <div id="teacher-main-content" class="max-w-4xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
+                <!-- הרחבנו את רוחב האזור המקסימלי ל-max-w-6xl כדי לאפשר תמונות ענקיות -->
+                <div id="teacher-main-content" class="w-full max-w-6xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
                     <!-- תמונה ואזור לחיץ -->
-                    <div id="teacher-image-container" class="relative shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0">
-                        <img id="teacher-image" src="" alt="חידה" class="max-w-full max-h-[65vh] block pointer-events-none select-none opacity-90">
+                    <div id="teacher-image-container" class="relative shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0 transition-all duration-300">
+                        <img id="teacher-image" src="" alt="חידה" class="w-full h-full object-fill block pointer-events-none select-none opacity-90">
                         <div id="teacher-hotspot" class="absolute hotspot-edit"></div>
                         <div class="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-4 py-2 rounded-lg text-xs font-bold border border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)] theme-font">
                             <i class="fas fa-crosshairs mr-1"></i> סמנו מלבן על המנעול
@@ -163,10 +164,11 @@
         </header>
 
         <main class="flex-1 overflow-y-auto p-6 shadow-inner relative z-10">
-            <div class="max-w-4xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
+            <!-- גם כאן הרחבנו ל-max-w-6xl -->
+            <div class="w-full max-w-6xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
                 <!-- תמונה ואזור לחיץ -->
-                <div class="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0">
-                    <img id="student-image" src="" alt="חידה" class="max-w-full max-h-[70vh] block pointer-events-none select-none opacity-90">
+                <div id="student-image-container" class="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0 transition-all duration-300">
+                    <img id="student-image" src="" alt="חידה" class="w-full h-full object-fill block pointer-events-none select-none opacity-90">
                     <div id="student-hotspot" class="absolute hotspot-play" onclick="openModal()"></div>
                 </div>
                 
@@ -275,6 +277,50 @@
             modalInput: document.getElementById('modal-input'),
             modalFeedback: document.getElementById('modal-feedback')
         };
+
+        // --- Resize Logic (הגדלה חכמה) ---
+        function resizeImages() {
+            if (levels.length === 0) return;
+            
+            // עדכון גודל למורה
+            if (!screens.teacher.classList.contains('hidden')) {
+                const imgEl = teacherDOM.img;
+                const container = teacherDOM.imgContainer;
+                if(imgEl.naturalWidth && container && container.parentElement) {
+                    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                    const parentWidth = container.parentElement.clientWidth * 0.95; // מתפרס על רוב המסך
+                    const maxH = window.innerHeight * 0.65; // מקסימום 65% מגובה המסך
+                    
+                    let w = parentWidth; 
+                    let h = w / ratio;
+                    if (h > maxH) { h = maxH; w = h * ratio; }
+                    
+                    container.style.width = Math.floor(w) + 'px';
+                    container.style.height = Math.floor(h) + 'px';
+                }
+            }
+            
+            // עדכון גודל לתלמיד
+            if (!screens.student.classList.contains('hidden')) {
+                const imgEl = studentDOM.img;
+                const container = document.getElementById('student-image-container');
+                if(imgEl.naturalWidth && container && container.parentElement) {
+                    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                    const parentWidth = container.parentElement.clientWidth * 0.95;
+                    const maxH = window.innerHeight * 0.70; // מקסימום 70% מגובה המסך (קצת יותר גדול כי אין עריכה)
+                    
+                    let w = parentWidth; 
+                    let h = w / ratio;
+                    if (h > maxH) { h = maxH; w = h * ratio; }
+                    
+                    container.style.width = Math.floor(w) + 'px';
+                    container.style.height = Math.floor(h) + 'px';
+                }
+            }
+        }
+
+        // האזנה לשינויי גודל מסך
+        window.addEventListener('resize', resizeImages);
 
         // --- Navigation ---
         function showScreen(screenName) {
@@ -452,7 +498,12 @@
 
             // 2. רנדור תוכן מרכזי
             const current = levels[currentLevelIndex];
+            
+            // הגדרה של טעינת התמונה - כשהיא נטענת נבצע שינוי גודל חכם
+            teacherDOM.img.onload = resizeImages;
             teacherDOM.img.src = current.image;
+            if (teacherDOM.img.complete) { resizeImages(); } // גיבוי למקרה שהתמונה כבר ב-Cache
+            
             updateHotspotVisual(teacherDOM.hotspot, current.hotspot);
             
             // עדכון שדות טקסט
@@ -511,7 +562,11 @@
         function renderStudentUI() {
             const current = levels[currentLevelIndex];
             studentDOM.progress.innerText = `חידה ${currentLevelIndex + 1} מתוך ${levels.length}`;
+            
+            studentDOM.img.onload = resizeImages;
             studentDOM.img.src = current.image;
+            if (studentDOM.img.complete) { resizeImages(); }
+            
             updateHotspotVisual(studentDOM.hotspot, current.hotspot);
         }
 
