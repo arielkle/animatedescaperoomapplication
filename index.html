@@ -26,7 +26,7 @@
         /* אזורים חמים */
         .hotspot-edit { border: 4px solid #06b6d4; background: rgba(6, 182, 212, 0.2); box-shadow: 0 0 15px rgba(6,182,212,0.5); z-index: 10; cursor: crosshair; }
         .hotspot-play { border: 4px solid transparent; z-index: 10; cursor: pointer; transition: all 0.3s; }
-        .hotspot-play:hover { border-color: rgba(6, 182, 212, 0.5); background: rgba(6, 182, 212, 0.1); }
+        .hotspot-play:hover { border-color: rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.1); }
         
         /* עיצוב פס גלילה */
         ::-webkit-scrollbar { width: 8px; }
@@ -34,9 +34,17 @@
         ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
 
-        /* התאמות למסך מלא */
-        :fullscreen #screen-student { background-color: #000; }
-        :fullscreen #student-image { max-height: 90vh; }
+        /* התאמות למסך מלא אמיתי - התמונה תופסת הכל */
+        :fullscreen #student-header, :fullscreen #student-controls { display: none; }
+        :fullscreen #screen-student { background-color: #000; display: flex; align-items: center; justify-content: center; }
+        :fullscreen .student-container-box { padding: 0; margin: 0; max-width: 100vw; }
+        :fullscreen #student-image-wrapper { border: none; border-radius: 0; box-shadow: none; width: 100vw; height: 100vh; }
+        :fullscreen #student-image { width: 100vw; height: 100vh; max-height: 100vh; object-fit: contain; opacity: 1; }
+        
+        /* כפתור יציאה ממסך מלא שמופיע רק בריחוף בחלק העליון */
+        #btn-exit-fullscreen { display: none; position: fixed; top: 10px; right: 10px; z-index: 200; }
+        :fullscreen #btn-exit-fullscreen { display: block; opacity: 0.3; transition: opacity 0.3s; }
+        :fullscreen #btn-exit-fullscreen:hover { opacity: 1; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden text-white">
@@ -44,8 +52,8 @@
     <!-- מסך פתיחה: בחירת תפקיד -->
     <div id="screen-intro" class="flex-1 flex flex-col items-center justify-center p-6 bg-slate-950 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-[#0b1120]">
         <i class="fas fa-user-secret text-cyan-500 text-6xl mb-6 opacity-80"></i>
-        <h1 class="text-6xl font-black text-cyan-400 mb-2 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] theme-font">חדר בריחה דיגיטלי</h1>
-        <p class="text-xl text-slate-400 mb-12 tracking-widest">הפלטפורמה ליצירה ומשחק</p>
+        <h1 class="text-6xl font-black text-cyan-400 mb-2 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] theme-font text-center">חדר בריחה דיגיטלי</h1>
+        <p class="text-xl text-slate-400 mb-12 tracking-widest text-center">הפלטפורמה ליצירה ומשחק</p>
         
         <div class="grid md:grid-cols-2 gap-8 max-w-4xl w-full">
             <!-- אזור התלמיד -->
@@ -71,11 +79,11 @@
                 <h2 class="text-3xl font-bold mb-4 z-10 text-cyan-100">אני מורה</h2>
                 <p class="text-slate-400 mb-8 z-10">צרו חדר בריחה חדש מתמונות, או המשיכו לערוך חדר קיים.</p>
                 <div class="flex flex-col gap-3 w-full z-10">
-                    <label class="bg-cyan-700 hover:bg-cyan-600 border border-cyan-500 text-white px-8 py-4 rounded-xl font-bold text-xl cursor-pointer transition transform hover:scale-105 block shadow-lg">
-                        יצירת חדר חדש (העלאת תמונה)
+                    <label class="bg-cyan-700 hover:bg-cyan-600 border border-cyan-500 text-white px-8 py-4 rounded-xl font-bold text-xl cursor-pointer transition transform hover:scale-105 block shadow-lg text-center">
+                        יצירת חדר חדש (תמונה/GIF)
                         <input type="file" class="hidden" accept="image/*" onchange="handleNewGame(event)">
                     </label>
-                    <label class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-cyan-300 px-8 py-3 rounded-xl font-bold cursor-pointer transition block">
+                    <label class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-cyan-300 px-8 py-3 rounded-xl font-bold cursor-pointer transition block text-center">
                         המשך עריכת פרויקט (JSON)
                         <input type="file" class="hidden" accept=".json" onchange="handleLoadGame(event, 'TEACHER')">
                     </label>
@@ -150,6 +158,10 @@
 
     <!-- מסך התלמיד (משחק) -->
     <div id="screen-student" class="hidden flex-1 flex flex-col bg-[#0b1120] overflow-hidden h-screen relative">
+        <button id="btn-exit-fullscreen" onclick="toggleFullScreen()" class="bg-black/50 hover:bg-black border border-white/30 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg">
+            <i class="fas fa-compress"></i>
+        </button>
+
         <!-- רקע רשתי עדין -->
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDBsaDQwdjQwSDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgxdjQwSDB6TTM5IDBoMXY0MEgzOXpNMSAzaDM4djFIMUMxek0xIDM5aDM4djFIMUMxek0xMSAxMWgxOHYxOEgxMXoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-50 pointer-events-none"></div>
 
@@ -170,10 +182,10 @@
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-6 shadow-inner relative z-10">
-            <div class="max-w-4xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
+        <main class="flex-1 overflow-y-auto p-6 shadow-inner relative z-10 flex flex-col items-center">
+            <div class="student-container-box max-w-4xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4 w-full">
                 <!-- תמונה ואזור לחיץ -->
-                <div class="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0">
+                <div id="student-image-wrapper" class="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0 transition-all flex items-center justify-center">
                     <img id="student-image" src="" alt="חידה" class="max-w-full max-h-[70vh] block pointer-events-none select-none opacity-90 transition-all">
                     <div id="student-hotspot" class="absolute hotspot-play" onclick="openModal()"></div>
                 </div>
@@ -194,11 +206,11 @@
             <!-- פס כחול עליון -->
             <div class="absolute top-0 left-0 w-full h-1 bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,1)]"></div>
             
-            <h2 class="theme-font text-3xl font-bold text-cyan-400 mb-6 tracking-widest uppercase">
+            <h2 class="theme-font text-3xl font-bold text-cyan-400 mb-6 tracking-widest uppercase text-center">
                 <i class="fas fa-lock mr-2 opacity-70"></i> המנעול נעול 🔒
             </h2>
             
-            <p id="modal-question" class="text-lg mb-8 leading-relaxed text-slate-300 bg-slate-800/50 p-4 rounded-lg border border-slate-700">שאלת המורה כאן...</p>
+            <p id="modal-question" class="text-lg mb-8 leading-relaxed text-slate-300 bg-slate-800/50 p-4 rounded-lg border border-slate-700 text-center"></p>
             
             <div class="space-y-6">
                 <input id="modal-input" type="text" placeholder="הקלידו תשובה..." autocomplete="off" class="w-full bg-[#0b1120] border-2 border-slate-700 focus:border-cyan-500 rounded-xl px-6 py-4 text-center text-2xl theme-font text-cyan-300 font-bold transition-all outline-none tracking-widest shadow-inner">
@@ -226,10 +238,10 @@
         <h1 class="theme-font text-7xl font-bold text-cyan-400 mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.4)] uppercase tracking-widest">יצאתם לחופשי! 🏆</h1>
         <p class="text-xl text-slate-400 mb-12 tracking-wide max-w-lg">כל הכבוד, פיצחתם את כל החידות בהצלחה!</p>
         <div class="flex gap-4">
-            <button onclick="location.reload()" class="bg-transparent border-2 border-cyan-600 text-cyan-400 hover:bg-cyan-900/30 px-10 py-3 rounded-full font-bold text-lg hover:scale-105 transition-all uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+            <button onclick="location.reload()" class="bg-transparent border-2 border-cyan-600 text-cyan-400 hover:bg-cyan-900/30 px-10 py-3 rounded-full font-bold text-lg hover:scale-105 transition-all uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.2)] text-center">
                 מסך הבית
             </button>
-            <button id="btn-victory-back-edit" onclick="returnToEditor()" class="hidden bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-3 rounded-full font-bold text-lg hover:scale-105 transition-all uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.4)]">
+            <button id="btn-victory-back-edit" onclick="returnToEditor()" class="hidden bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-3 rounded-full font-bold text-lg hover:scale-105 transition-all uppercase tracking-widest shadow-[0_0_15px_rgba(99,102,241,0.4)] text-center">
                 חזרה לעריכה
             </button>
         </div>
@@ -238,7 +250,7 @@
     <!-- הלוגיקה (JavaScript) -->
     <script>
         // --- State ---
-        let userRole = null; // 'TEACHER' | 'STUDENT'
+        let userRole = null; 
         let levels = [];
         let currentLevelIndex = 0;
         let isDragging = false;
@@ -280,9 +292,10 @@
 
         // --- Fullscreen Logic ---
         function toggleFullScreen() {
+            const container = screens.student;
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                container.requestFullscreen().catch(err => {
+                    alert(`Error: ${err.message}`);
                 });
             } else {
                 if (document.exitFullscreen) {
@@ -291,7 +304,6 @@
             }
         }
 
-        // Listen for fullscreen change to update icon
         document.addEventListener('fullscreenchange', () => {
             const icon = document.querySelector('#btn-fullscreen i');
             if (document.fullscreenElement) {
@@ -354,7 +366,7 @@
                         renderStudentUI();
                     }
                 } catch (err) {
-                    alert("שגיאה: קובץ ה-JSON אינו תקין.");
+                    alert("שגיאה בקובץ ה-JSON.");
                 }
             };
             reader.readAsText(file);
@@ -434,6 +446,7 @@
                 const div = document.createElement('div');
                 div.className = `group relative p-2 rounded-xl border border-slate-700 cursor-pointer transition-all ${currentLevelIndex === idx ? 'active-level' : 'bg-slate-800 hover:border-slate-500'}`;
                 div.onclick = () => { currentLevelIndex = idx; renderTeacherUI(); };
+                
                 div.innerHTML = `
                     <img src="${lvl.image}" class="w-full h-20 object-cover rounded-md mb-2 opacity-80" alt="תמונה">
                     <div class="text-sm font-bold flex justify-between items-center px-1 text-cyan-200"><span>חידה ${idx + 1}</span></div>
@@ -517,7 +530,7 @@
                 }, 1500);
             } else {
                 fb.innerHTML = `<i class="fas fa-times-circle ml-2"></i> טעות, נסו שוב!`;
-                fb.className = "text-red-400 font-bold flex items-center justify-center py-2 bg-red-900/20 border border-red-800/50 rounded-lg mt-4 theme-font tracking-widest text-sm";
+                fb.className = "text-red-400 font-bold flex items-center justify-center py-2 bg-red-900/20 border border-red-800/50 rounded-lg mt-4 theme-font tracking-widest text-sm text-center";
                 inputEl.classList.add('animate-shake');
                 setTimeout(() => inputEl.classList.remove('animate-shake'), 500);
             }
