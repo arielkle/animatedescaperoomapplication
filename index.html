@@ -177,31 +177,35 @@
 
         <main class="flex-1 overflow-y-auto p-6 shadow-inner relative z-10 flex flex-col items-center justify-center">
             
-            <!-- מיכל הסרטון (מוצג רק אם המורה הגדיר סרטון) -->
-            <div id="student-video-container" class="hidden w-full mx-auto flex-col items-center gap-4">
-                <h2 class="text-2xl font-bold text-indigo-300 theme-font tracking-wider text-center"><i class="fas fa-film"></i> צפו בסרטון לפני שתמשיכו</h2>
-                <div id="student-video-wrapper" class="bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50 transition-all duration-300">
-                    <div id="student-video-placeholder" class="w-full h-full"></div>
-                </div>
-            </div>
+            <div id="student-unified-container" class="hidden w-full mx-auto flex-col items-center gap-4 pb-16">
+                <!-- כותרת דינמית משותפת -->
+                <h2 id="student-stage-title" class="text-2xl font-bold text-indigo-300 theme-font tracking-wider text-center transition-all duration-500 opacity-100">
+                    <i class="fas fa-film"></i> צפו בסרטון לפני שתמשיכו
+                </h2>
+                
+                <!-- קופסת מדיה מאוחדת - הוידאו והתמונה יושבים בדיוק באותו מקום! -->
+                <div id="student-media-box" class="relative bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50 shrink-0 transition-all duration-300">
+                    
+                    <!-- שכבת הוידאו -->
+                    <div id="student-video-layer" class="absolute inset-0 z-10 transition-opacity duration-1000 opacity-100 bg-black">
+                        <div id="student-video-placeholder" class="w-full h-full"></div>
+                    </div>
 
-            <!-- מיכל החידה (התמונה והמנעול) -->
-            <div id="student-puzzle-container" class="hidden w-full mx-auto flex flex-col items-center gap-4 pb-16">
-                <!-- כותרת תואמת לכותרת הוידאו כדי למנוע קפיצות גובה -->
-                <h2 class="text-2xl font-bold text-cyan-300 theme-font tracking-wider text-center"><i class="fas fa-search"></i> מצאו את המנעול בתמונה ולחצו עליו</h2>
-                
-                <!-- תמונה ואזור לחיץ - מקבל את אותו העיצוב בדיוק כמו הוידאו! -->
-                <div id="student-image-container" class="relative bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50 shrink-0 transition-all duration-300">
-                    <img id="student-image" src="" alt="חידה" class="w-full h-full object-fill block pointer-events-none select-none opacity-90">
-                    <div id="student-hotspot" class="absolute hotspot-play" onclick="openModal()"></div>
+                    <!-- שכבת התמונה והחידה -->
+                    <div id="student-puzzle-layer" class="absolute inset-0 z-20 transition-opacity duration-1000 opacity-0 pointer-events-none bg-transparent">
+                        <img id="student-image" src="" alt="חידה" class="w-full h-full object-fill block pointer-events-none select-none opacity-90 bg-black">
+                        <div id="student-hotspot" class="absolute hotspot-play" onclick="openModal()"></div>
+                    </div>
                 </div>
                 
-                <div class="text-slate-400 text-center shrink-0 mt-2">
+                <!-- אזור עזרה (יופיע רק בשלב החידה) -->
+                <div id="student-footer" class="text-slate-400 text-center shrink-0 mt-2 transition-opacity duration-1000 opacity-0 pointer-events-none">
                     <button onclick="window.open('https://notebooklm.google.com/', '_blank')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-8 py-3 rounded-full font-bold transition-transform hover:scale-105 shadow-xl text-slate-300 text-sm tracking-wider">
                         <i class="fas fa-database mr-2 text-cyan-500"></i> היעזרו ב-NotebookLM
                     </button>
                 </div>
             </div>
+            
         </main>
     </div>
 
@@ -327,9 +331,13 @@
 
         const studentDOM = {
             progress: document.getElementById('student-progress-text'),
-            videoContainer: document.getElementById('student-video-container'), // חדש
-            videoPlaceholder: document.getElementById('student-video-placeholder'), // מעודכן ל-API של יוטיוב
-            puzzleContainer: document.getElementById('student-puzzle-container'), // חדש
+            unifiedContainer: document.getElementById('student-unified-container'),
+            stageTitle: document.getElementById('student-stage-title'),
+            mediaBox: document.getElementById('student-media-box'),
+            videoLayer: document.getElementById('student-video-layer'),
+            puzzleLayer: document.getElementById('student-puzzle-layer'),
+            videoPlaceholder: document.getElementById('student-video-placeholder'),
+            footer: document.getElementById('student-footer'),
             img: document.getElementById('student-image'),
             hotspot: document.getElementById('student-hotspot'),
             modalQ: document.getElementById('modal-question'),
@@ -371,18 +379,11 @@
                 let h = w / ratio;
                 if (h > maxH) { h = maxH; w = h * ratio; }
                 
-                // החל על התמונה
-                const imgContainer = document.getElementById('student-image-container');
-                if(imgContainer) {
-                    imgContainer.style.width = Math.floor(w) + 'px';
-                    imgContainer.style.height = Math.floor(h) + 'px';
-                }
-                
-                // החל על מיכל הוידאו
-                const vidContainer = document.getElementById('student-video-wrapper');
-                if(vidContainer) {
-                    vidContainer.style.width = Math.floor(w) + 'px';
-                    vidContainer.style.height = Math.floor(h) + 'px';
+                // החל על הקופסה המאוחדת
+                const mediaBox = studentDOM.mediaBox;
+                if(mediaBox) {
+                    mediaBox.style.width = Math.floor(w) + 'px';
+                    mediaBox.style.height = Math.floor(h) + 'px';
                 }
             }
         }
@@ -635,23 +636,33 @@
             const current = levels[currentLevelIndex];
             studentDOM.progress.innerText = `חידה ${currentLevelIndex + 1} מתוך ${levels.length}`;
             
-            // מבצעים התאמת גודל התחלתית כדי שהקופסאות יהיו בגודל הנכון מיד
+            studentDOM.unifiedContainer.classList.remove('hidden');
+            studentDOM.unifiedContainer.classList.add('flex');
+            
+            // מבצעים התאמת גודל התחלתית
             resizeImages();
             
             // בודק אם יש וידאו ע"י ניסיון לחלץ את המזהה
             const videoId = getYouTubeVideoId(current.videoUrl);
             
             if (videoId) {
-                // הצג את מסך הוידאו והסתר את החידה
-                studentDOM.puzzleContainer.classList.add('hidden');
-                studentDOM.puzzleContainer.classList.remove('flex');
-                studentDOM.videoContainer.classList.remove('hidden');
-                studentDOM.videoContainer.classList.add('flex');
+                // הגדרות למצב וידאו
+                studentDOM.stageTitle.innerHTML = '<i class="fas fa-film"></i> צפו בסרטון לפני שתמשיכו';
+                studentDOM.stageTitle.className = "text-2xl font-bold text-indigo-300 theme-font tracking-wider text-center transition-all duration-500 opacity-100";
+                
+                studentDOM.videoLayer.style.opacity = '1';
+                studentDOM.videoLayer.style.pointerEvents = 'auto';
+                
+                studentDOM.puzzleLayer.style.opacity = '0';
+                studentDOM.puzzleLayer.style.pointerEvents = 'none';
+                
+                studentDOM.footer.style.opacity = '0';
+                studentDOM.footer.style.pointerEvents = 'none';
                 
                 playYouTubeVideo(videoId);
             } else {
-                // אין וידאו - דלג ישר לחידה
-                proceedToPuzzle();
+                // אין וידאו - דלג ישר לחידה (מעבר מיידי ללא אנימציה מיוחדת)
+                proceedToPuzzle(true);
             }
         }
 
@@ -684,7 +695,7 @@
         }
 
         // פונקציה שעוברת ממסך הוידאו למסך החידה
-        function proceedToPuzzle() {
+        function proceedToPuzzle(instant = false) {
             const current = levels[currentLevelIndex];
             
             // עצור את הוידאו כדי שלא יתנגן ברקע
@@ -692,17 +703,44 @@
                 ytPlayer.stopVideo();
             }
             
-            // הסתר וידאו, הצג חידה באותו מקום בדיוק
-            studentDOM.videoContainer.classList.add('hidden');
-            studentDOM.videoContainer.classList.remove('flex');
-            studentDOM.puzzleContainer.classList.remove('hidden');
-            studentDOM.puzzleContainer.classList.add('flex');
-            
-            // מעדכנים תמונה (אין צורך להמתין לטעינה כי הגודל מחושב מראש)
+            // טעינת תמונת החידה
             studentDOM.img.src = current.image;
             resizeImages();
-            
             updateHotspotVisual(studentDOM.hotspot, current.hotspot);
+            
+            if (instant) {
+                // חשיפה מיידית ללא וידאו לפני כן
+                studentDOM.stageTitle.innerHTML = '<i class="fas fa-search"></i> מצאו את המנעול בתמונה ולחצו עליו';
+                studentDOM.stageTitle.className = "text-2xl font-bold text-cyan-300 theme-font tracking-wider text-center transition-all duration-500 opacity-100";
+                
+                studentDOM.videoLayer.style.opacity = '0';
+                studentDOM.videoLayer.style.pointerEvents = 'none';
+                studentDOM.puzzleLayer.style.opacity = '1';
+                studentDOM.puzzleLayer.style.pointerEvents = 'auto';
+                studentDOM.footer.style.opacity = '1';
+                studentDOM.footer.style.pointerEvents = 'auto';
+            } else {
+                // מעבר סינמטי וחלק! (Crossfade)
+                
+                // 1. העלמת הכותרת הישנה ושכבת הוידאו
+                studentDOM.stageTitle.classList.replace('opacity-100', 'opacity-0');
+                studentDOM.videoLayer.style.opacity = '0';
+                studentDOM.videoLayer.style.pointerEvents = 'none';
+                
+                // 2. חשיפת שכבת החידה (עמעום מושלם שמשתלב אחד בשני)
+                studentDOM.puzzleLayer.style.opacity = '1';
+                studentDOM.puzzleLayer.style.pointerEvents = 'auto';
+                
+                studentDOM.footer.style.opacity = '1';
+                studentDOM.footer.style.pointerEvents = 'auto';
+                
+                // 3. חשיפת הכותרת החדשה לאחר חצי שנייה
+                setTimeout(() => {
+                    studentDOM.stageTitle.innerHTML = '<i class="fas fa-search"></i> מצאו את המנעול בתמונה ולחצו עליו';
+                    studentDOM.stageTitle.classList.replace('text-indigo-300', 'text-cyan-300');
+                    studentDOM.stageTitle.classList.replace('opacity-0', 'opacity-100');
+                }, 500);
+            }
         }
 
         // --- Modal Logic (Student) ---
