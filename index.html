@@ -178,23 +178,25 @@
         <main class="flex-1 overflow-y-auto p-6 shadow-inner relative z-10 flex flex-col items-center justify-center">
             
             <!-- מיכל הסרטון (מוצג רק אם המורה הגדיר סרטון) -->
-            <div id="student-video-container" class="hidden w-full max-w-5xl mx-auto flex-col items-center gap-6">
-                <h2 class="text-2xl font-bold text-indigo-300 theme-font tracking-wider"><i class="fas fa-film"></i> צפו בסרטון לפני שתמשיכו</h2>
-                <div class="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50">
+            <div id="student-video-container" class="hidden w-full mx-auto flex-col items-center gap-4">
+                <h2 class="text-2xl font-bold text-indigo-300 theme-font tracking-wider text-center"><i class="fas fa-film"></i> צפו בסרטון לפני שתמשיכו</h2>
+                <div id="student-video-wrapper" class="bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50 transition-all duration-300">
                     <div id="student-video-placeholder" class="w-full h-full"></div>
                 </div>
             </div>
 
             <!-- מיכל החידה (התמונה והמנעול) -->
-            <div id="student-puzzle-container" class="hidden w-full max-w-6xl mx-auto flex flex-col items-center gap-8 pb-16 pt-4">
-                <!-- תמונה ואזור לחיץ -->
-                <div id="student-image-container" class="relative shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-700 rounded-lg overflow-hidden bg-black shrink-0 transition-all duration-300">
+            <div id="student-puzzle-container" class="hidden w-full mx-auto flex flex-col items-center gap-4 pb-16">
+                <!-- כותרת תואמת לכותרת הוידאו כדי למנוע קפיצות גובה -->
+                <h2 class="text-2xl font-bold text-cyan-300 theme-font tracking-wider text-center"><i class="fas fa-search"></i> מצאו את המנעול בתמונה ולחצו עליו</h2>
+                
+                <!-- תמונה ואזור לחיץ - מקבל את אותו העיצוב בדיוק כמו הוידאו! -->
+                <div id="student-image-container" class="relative bg-black rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-indigo-900/50 shrink-0 transition-all duration-300">
                     <img id="student-image" src="" alt="חידה" class="w-full h-full object-fill block pointer-events-none select-none opacity-90">
                     <div id="student-hotspot" class="absolute hotspot-play" onclick="openModal()"></div>
                 </div>
                 
-                <div class="text-slate-400 text-center shrink-0">
-                    <p class="mb-4 theme-font tracking-wide text-cyan-600/50">/// חפשו את המנעול שבתמונה ולחצו עליו ///</p>
+                <div class="text-slate-400 text-center shrink-0 mt-2">
                     <button onclick="window.open('https://notebooklm.google.com/', '_blank')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-8 py-3 rounded-full font-bold transition-transform hover:scale-105 shadow-xl text-slate-300 text-sm tracking-wider">
                         <i class="fas fa-database mr-2 text-cyan-500"></i> היעזרו ב-NotebookLM
                     </button>
@@ -339,14 +341,15 @@
         function resizeImages() {
             if (levels.length === 0) return;
             
+            // נקבע יחס קבוע של 16:9 כדי שהמעבר מוידאו לתמונה יהיה זהה לחלוטין!
+            const ratio = 16 / 9;
+            
             // עדכון גודל למורה
             if (!screens.teacher.classList.contains('hidden')) {
-                const imgEl = teacherDOM.img;
                 const container = teacherDOM.imgContainer;
-                if(imgEl.naturalWidth && container && container.parentElement) {
-                    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                if(container && container.parentElement) {
                     const parentWidth = container.parentElement.clientWidth * 0.95; 
-                    const maxH = window.innerHeight * 0.55; // קצת פחות גובה כי הוספנו שדה וידאו
+                    const maxH = window.innerHeight * 0.55; 
                     
                     let w = parentWidth; 
                     let h = w / ratio;
@@ -357,21 +360,29 @@
                 }
             }
             
-            // עדכון גודל לתלמיד
-            if (!screens.student.classList.contains('hidden') && !studentDOM.puzzleContainer.classList.contains('hidden')) {
-                const imgEl = studentDOM.img;
-                const container = document.getElementById('student-image-container');
-                if(imgEl.naturalWidth && container && container.parentElement) {
-                    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
-                    const parentWidth = container.parentElement.clientWidth * 0.95;
-                    const maxH = window.innerHeight * 0.70; 
-                    
-                    let w = parentWidth; 
-                    let h = w / ratio;
-                    if (h > maxH) { h = maxH; w = h * ratio; }
-                    
-                    container.style.width = Math.floor(w) + 'px';
-                    container.style.height = Math.floor(h) + 'px';
+            // עדכון גודל לתלמיד (חל על הוידאו ועל התמונה בדיוק באותו אופן!)
+            if (!screens.student.classList.contains('hidden')) {
+                let parentWidth = window.innerWidth * 0.95;
+                if (parentWidth > 1024) parentWidth = 1024; // מקסימום רוחב
+                
+                const maxH = window.innerHeight * 0.65; 
+                
+                let w = parentWidth; 
+                let h = w / ratio;
+                if (h > maxH) { h = maxH; w = h * ratio; }
+                
+                // החל על התמונה
+                const imgContainer = document.getElementById('student-image-container');
+                if(imgContainer) {
+                    imgContainer.style.width = Math.floor(w) + 'px';
+                    imgContainer.style.height = Math.floor(h) + 'px';
+                }
+                
+                // החל על מיכל הוידאו
+                const vidContainer = document.getElementById('student-video-wrapper');
+                if(vidContainer) {
+                    vidContainer.style.width = Math.floor(w) + 'px';
+                    vidContainer.style.height = Math.floor(h) + 'px';
                 }
             }
         }
@@ -624,12 +635,16 @@
             const current = levels[currentLevelIndex];
             studentDOM.progress.innerText = `חידה ${currentLevelIndex + 1} מתוך ${levels.length}`;
             
+            // מבצעים התאמת גודל התחלתית כדי שהקופסאות יהיו בגודל הנכון מיד
+            resizeImages();
+            
             // בודק אם יש וידאו ע"י ניסיון לחלץ את המזהה
             const videoId = getYouTubeVideoId(current.videoUrl);
             
             if (videoId) {
                 // הצג את מסך הוידאו והסתר את החידה
                 studentDOM.puzzleContainer.classList.add('hidden');
+                studentDOM.puzzleContainer.classList.remove('flex');
                 studentDOM.videoContainer.classList.remove('hidden');
                 studentDOM.videoContainer.classList.add('flex');
                 
@@ -677,15 +692,15 @@
                 ytPlayer.stopVideo();
             }
             
-            // הסתר וידאו, הצג חידה
+            // הסתר וידאו, הצג חידה באותו מקום בדיוק
             studentDOM.videoContainer.classList.add('hidden');
             studentDOM.videoContainer.classList.remove('flex');
             studentDOM.puzzleContainer.classList.remove('hidden');
+            studentDOM.puzzleContainer.classList.add('flex');
             
-            // טעינת תמונת החידה
-            studentDOM.img.onload = resizeImages;
+            // מעדכנים תמונה (אין צורך להמתין לטעינה כי הגודל מחושב מראש)
             studentDOM.img.src = current.image;
-            if (studentDOM.img.complete) { resizeImages(); }
+            resizeImages();
             
             updateHotspotVisual(studentDOM.hotspot, current.hotspot);
         }
